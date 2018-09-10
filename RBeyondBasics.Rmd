@@ -4,4 +4,93 @@ author: "Rongkui Han"
 date: "9/10/2018"
 output: html_document
 ---
+ 
+Sample code: https://github.com/dsidavis/RBeyondBasics/blob/master/DH/orig.R    
+
+Problems with this code:   
+- line 3: don't do this ever. Don't erase stuff from other people's environment.  
+- line 4: use library() if you can.  
+- line 83 & 84: don't have the dataset attached. If you can put it online you can put the url there. Or you can put the dataset into a variable, and only download them if the variable doesn't exist locally:
+
+`if(!exists("sp")) {
+ sp = /User/blahblah.csv
+}`
+  
+The better practice is to put this data into a package. This is how to do it in *command line*:   
+`mkdir r.package`  
+`cd r.package`  
+`vim DESCRIPTION` #ALL CAPS. All packages need a description file. You can write a description by copying another description file.  
+`mkdir inst`   
+`cd inst`  
+`mkdir mydata`
+`cd mydata`
+`vim d.csv` #you can look at the data... 2x2
+Now you go back into the directory that is the name of your package (r.package). And you do this: 
+`R CMD INSTALL .`
+Now this package is installed.  
+
+```{r}
+library('r.package')
+system.file('mydata/d.csv', package = 'r.package')
+```
+
+`R CMD build bob`? # didn't follow cuz I didn't build my package right.  
+
+How do you share this package tho?  
+
+(You can have an .RBuildignore file where you list the names of all the files you want the `R CMD build` command to ignore. )
+
+How do you read in the data from your package tho?  
+```{r}
+data(d) #didn't work. 
+```
+
+Back to command line:   
+`cd /Users/rongkui/Desktop/Lab/Admin/RBeyondBasics/RBeyondBasics/r.package/`
+`mkdir data`
+
+Back to R:  
+```{r}
+dat = read.csv(file = "r.package/inst/mydata/d.csv")
+dat
+save(dat, file = "r.package/data/dat.rda")
+```
+
+Command line:  
+`R CMD INSTALL .`
+
+R:  
+```{r}
+library(bob)
+data(dat)
+dat
+```
+Now you have a package with a readable dataset in it. So basically an R package is a directory (names after the package itself), containing a DESCRIPTION file (that follows specific pattern), an inst dirsctory, and other directories that contain your data and code.   
+
+- Add dependent packages into DESCRIPTION file. Add a line like this:
+Depends: tidyvers, dplyr, ggplot2   
+
+- Add small datasets to your package as examples.  
+
+Now we make an "R" directory directly underneath the r.package directory that will contain all the stripts. Clone the orig.R script from the git repository and put it in there.    
+Now create a file called NAMESPACE underneath the main directory that reads:
+`export(tidy)`
+You want to export any functions in any of the R codes that you wrote that you want your users to see.   
+
+```{r}
+library(r.package)
+r.package::simple
+ls(2) #this is problematic. I cannot find any of the functions. 
+ls() #only found the dataset.  
+```
+
+Didn't work. SMH. 
+
+---Upgrading your package---   
+
+- Change "Depends:" into "Imports:" in the DESCRIPTION file. Always use Import unless you have a very good reason. 
+
+- Add "import(dplyr)" to NAMESPACE file. 
+
+
 
