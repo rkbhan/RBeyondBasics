@@ -130,8 +130,192 @@ $(document).ready(function () {
 - line 3: don’t do this ever. Don’t erase stuff from other people’s environment.<br />
 - line 4: use library() if you can.<br />
 - line 83 &amp; 84: don’t have the dataset attached. If you can put it online you can put the url there. Or you can put the dataset into a variable, and only download them if the variable doesn’t exist locally:</p>
-<p><code>if(!exists(&quot;sp&quot;))   sp = /User/blahblah.csv</code></p>
-<p>The better practice is to put this data into a package:</p>
+<p><code>if(!exists(&quot;sp&quot;)) {  sp = /User/blahblah.csv }</code></p>
+<p>The better practice is to put this data into a package. This is how to do it in <em>command line</em>:<br />
+<code>mkdir r.package</code><br />
+<code>cd r.package</code><br />
+<code>vim DESCRIPTION</code> #ALL CAPS. All packages need a description file. You can write a description by copying another description file.<br />
+<code>mkdir inst</code><br />
+<code>cd inst</code><br />
+<code>mkdir mydata</code> <code>cd mydata</code> <code>vim d.csv</code> #you can look at the data… 2x2 Now you go back into the directory that is the name of your package (r.package). And you do this: <code>R CMD INSTALL .</code> Now this package is installed.</p>
+<pre class="r"><code>library('r.package')</code></pre>
+<pre><code>## Loading required package: dplyr</code></pre>
+<pre><code>## Warning: package 'dplyr' was built under R version 3.4.2</code></pre>
+<pre><code>## 
+## Attaching package: 'dplyr'</code></pre>
+<pre><code>## The following objects are masked from 'package:stats':
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>system.file('mydata/d.csv', package = 'r.package')</code></pre>
+<pre><code>## [1] &quot;/Library/Frameworks/R.framework/Versions/3.4/Resources/library/r.package/mydata/d.csv&quot;</code></pre>
+<p><code>R CMD build bob</code>? # didn’t follow cuz I didn’t build my package right.</p>
+<p>How do you share this package tho?</p>
+<p>(You can have an .RBuildignore file where you list the names of all the files you want the <code>R CMD build</code> command to ignore. )</p>
+<p>How do you read in the data from your package tho?</p>
+<pre class="r"><code>data(d) #didn't work. </code></pre>
+<pre><code>## Warning in data(d): data set 'd' not found</code></pre>
+<p>Back to command line:<br />
+<code>cd /Users/rongkui/Desktop/Lab/Admin/RBeyondBasics/RBeyondBasics/r.package/</code> <code>mkdir data</code></p>
+<p>Back to R:</p>
+<pre class="r"><code>dat = read.csv(file = &quot;r.package/inst/mydata/d.csv&quot;)
+dat</code></pre>
+<pre><code>##   A  B
+## 1 1  5
+## 2 1 10</code></pre>
+<pre class="r"><code>save(dat, file = &quot;r.package/data/dat.rda&quot;)</code></pre>
+<p>Command line:<br />
+<code>R CMD INSTALL .</code></p>
+<p>R:</p>
+<pre class="r"><code>library(bob)
+data(dat)
+dat</code></pre>
+<pre><code>##   A  B
+## 1 1  5
+## 2 1 10</code></pre>
+<p>Now you have a package with a readable dataset in it. So basically an R package is a directory (names after the package itself), containing a DESCRIPTION file (that follows specific pattern), an inst dirsctory, and other directories that contain your data and code.</p>
+<ul>
+<li><p>Add dependent packages into DESCRIPTION file. Add a line like this: Depends: tidyvers, dplyr, ggplot2</p></li>
+<li><p>Add small datasets to your package as examples.</p></li>
+</ul>
+<p>Now we make an “R” directory directly underneath the r.package directory that will contain all the stripts. Clone the orig.R script from the git repository and put it in there.<br />
+Now create a file called NAMESPACE underneath the main directory that reads: <code>export(tidy)</code> You want to export any functions in any of the R codes that you wrote that you want your users to see.</p>
+<pre class="r"><code>library(r.package)
+r.package::simple</code></pre>
+<pre><code>## function (x) 
+## {
+##     x[x &gt; 0]
+## }
+## &lt;environment: namespace:r.package&gt;</code></pre>
+<pre class="r"><code>ls(2) #this is problematic. I cannot find any of the functions. </code></pre>
+<pre><code>## character(0)</code></pre>
+<pre class="r"><code>ls() #only found the dataset.  </code></pre>
+<pre><code>## [1] &quot;dat&quot;</code></pre>
+<p>Didn’t work. SMH. So I’m going to manually type in the tidy function so we could work with it later.</p>
+<pre class="r"><code>tidy &lt;- function(catch, drifts){
+  
+  # initialize variables
+  # max and min depth
+  min_depth &lt;- min(c(catch$start_depth, catch$end_depth))
+  max_depth &lt;- max(c(catch$start_depth, catch$end_depth))
+  # max and min size
+  max_size &lt;- max(catch$size)
+  min_size &lt;- min(catch$size)
+  # three letter site names
+  sites &lt;- unique(x = substr(drifts$IDCell.per.Trip, 0, 3))
+  
+  # initialize marticies
+  # total CPUE
+  total_CPUE &lt;- matrix(0L, nrow = (max_depth - min_depth + 1), ncol = (max_size - min_size + 1))
+  colnames(total_CPUE) &lt;- c(dQuote(min_size:max_size))
+  rownames(total_CPUE) &lt;- c(dQuote(min_depth:max_depth))
+  # site-specific CPUE
+  CPUEperSite &lt;- matrix(0L, nrow = (length(sites)), ncol = (max_size - min_size + 2))
+  colnames(CPUEperSite) &lt;- c(&quot;Site&quot;, dQuote(min_size:max_size))
+  CPUEperSite[,1] &lt;- sites
+  # construct total effort for each depth
+  # effort &lt;- effort_function()
+  
+  # tidy dataframe (site, size, depth, CPUE)
+  tidy_data &lt;- data.frame(row.names = c(&quot;site&quot;, &quot;size&quot;, &quot;depth&quot;, &quot;catch&quot;))
+  
+  
+  #loops
+  # calculate CPUE per site
+  for(x in 1:nrow(catch)){ #this will run through every row in the BLU_only_depths matrix
+    # x counts the row of the BLU_only_depths matrix that is being currently worked on
+    # determine if the start or end depth is deeper and save the deeper value
+    # pmax stands for parallel maximum, which compares two columns and finds the maximum value
+    deeper &lt;- pmax(catch$start_depth[x], catch$end_depth[x])
+    # determine if the start or end depth is shallower and save the shallower depth
+    shallower &lt;-pmin(catch$start_depth[x], catch$end_depth[x])
+    # new dataframe to collect all the data in this iteration of the loop
+    this_fish &lt;- data.frame(site = c(rep(substr(catch$IDCell.per.Trip[x], 0, 3), times = (deeper - shallower +1))), size = c(rep(catch$size[x], times = (deeper - shallower +1))), depth = c(shallower:deeper), catch = c(rep(1, times = (deeper - shallower +1))))
+    # Add 1 to the column associated with the fish's length and all the rows in the range of depths fished for that drift
+    tidy_data &lt;- rbind(tidy_data, this_fish)
+    # time keeper
+    print(x)
+  }
+
+#  return(tidy_data)
+
+#orig = tidy_data    
+  # tallies the number of columns that match the 'group_by' call and collapses them down to one row
+  tidy_data &lt;- tidy_data %&gt;%
+    group_by(site, size, depth) %&gt;%
+    tally()
+  # matches the depth column in 'effort' to the depth column in 'tidy_data' and inputs the associated effort value as a new column in tidy-data
+  tidy_data$effort &lt;- effort[match(tidy_data$depth, effort$depth), 2]
+  
+  
+  # Trying to control for the posibility that one site contributed the majority of the CPUE to the grand total, thereby masking the data from the other sites.
+  # The way that it is being calculated here makes the assumption that, since they fished the same number of tansects, they fished for the same amount of time at each location
+  # An ANOVA confirms that total drift times are not significantly different across sites
+  # After calculating CPUE, total CPUE for each site is added up.
+  # Then CPUE is divide by the site total
+  
+  # add a row that calculates CPUE based on total effort
+  tidy_data &lt;- mutate(tidy_data, CPUE = n/effort)
+  # new variable that calculates the total CPUE per site
+  CPUE_by_site &lt;- tidy_data %&gt;%
+    group_by(site) %&gt;%
+    summarize(site_total_CPUE = sum(CPUE))
+  # merge CPUE_by_site with tidy_data by matching the name 'site'
+  tidy_data &lt;- merge(tidy_data, CPUE_by_site, by='site')
+  tidy_data &lt;- mutate(tidy_data, normalized_CPUE = CPUE/site_total_CPUE)
+  
+  
+  return(tidy_data)
+}</code></pre>
+<p>—Upgrading your package—</p>
+<ul>
+<li><p>Change “Depends:” into “Imports:” in the DESCRIPTION file. Always use Import unless you have a very good reason.</p></li>
+<li><p>Add “import(dplyr)” to NAMESPACE file.</p></li>
+</ul>
+<p>—Some code review—</p>
+<p>Looking at the orig.R code.</p>
+<p>line 10: concatinating two vectors with c(,) for the min() function. But if you look at the min() function, it takes “…” as an input, meaning it will take anything and concatinate them in the backstage. So you don’t have to do the concatination.</p>
+<p>line 36: for loops are bad. sapply and lapply isn’t much differet.<br />
+line 36: if the “catch” dataframe is empty, the nrow() will be 0. The loop will run twice with i = 1 and 0 and stop, and you won’t get an error message.<br />
+line 36-80: how do we make this faster? - line 40: pmax -&gt; max - line 40</p>
+<p>line 48: time keeper with print(x) is slow. we do this:</p>
+<p><code>function(catch, drift, verbose = TRUE) {   blahblah   if (verbose &amp;&amp; x%% 100 ==) print (x) }</code></p>
+<p>line 46: rbind is bad. Everytime you rbind you create two dataframe that are almost identical. You could pre-allocate the space and fill in the space. But in this case we do not know how much space we need at the end.</p>
+<ul>
+<li>first, keep each i an item on a list (of undetermined length): <code>results = list()</code></li>
+<li>second, get the rbind out of the loop. towards the end. So it will rbind everything in one go instead of once per iteration. This is much more efficient. <code>tidy_data = rbind(results)</code></li>
+<li>now go back to the list. If you shove each element into the list of undetermined length, you create the same problem with rbind. So you still have to pre-allocate space onto the list. <code>results = vector(&quot;list&quot;, nrow(catch))</code> (it is impossible to create a list of certain length with the function list().)</li>
+<li>then you could do this:<br />
+<code>do.call(rbind, results)</code>.</li>
+</ul>
+<p>Here is how do.call works:</p>
+<pre class="r"><code>f = function(a,b) a+b
+f(1,10)</code></pre>
+<pre><code>## [1] 11</code></pre>
+<pre class="r"><code>do.call(f, list(1,10))</code></pre>
+<pre><code>## [1] 11</code></pre>
+<p>How do you find global variables in a function:</p>
+<pre class="r"><code>codetools::findGlobals(tidy, FALSE) #the false separates the functions from the variables. </code></pre>
+<pre><code>## $functions
+##  [1] &quot;-&quot;          &quot;:&quot;          &quot;(&quot;          &quot;[&quot;          &quot;[&lt;-&quot;       
+##  [6] &quot;{&quot;          &quot;/&quot;          &quot;%&gt;%&quot;        &quot;+&quot;          &quot;&lt;-&quot;        
+## [11] &quot;$&quot;          &quot;$&lt;-&quot;        &quot;c&quot;          &quot;colnames&lt;-&quot; &quot;data.frame&quot;
+## [16] &quot;dQuote&quot;     &quot;for&quot;        &quot;group_by&quot;   &quot;length&quot;     &quot;match&quot;     
+## [21] &quot;matrix&quot;     &quot;max&quot;        &quot;merge&quot;      &quot;min&quot;        &quot;mutate&quot;    
+## [26] &quot;nrow&quot;       &quot;pmax&quot;       &quot;pmin&quot;       &quot;print&quot;      &quot;rbind&quot;     
+## [31] &quot;rep&quot;        &quot;return&quot;     &quot;rownames&lt;-&quot; &quot;substr&quot;     &quot;sum&quot;       
+## [36] &quot;summarize&quot;  &quot;tally&quot;      &quot;unique&quot;    
+## 
+## $variables
+## [1] &quot;CPUE&quot;            &quot;depth&quot;           &quot;effort&quot;          &quot;n&quot;              
+## [5] &quot;site&quot;            &quot;site_total_CPUE&quot; &quot;size&quot;</code></pre>
+<p>Here codetools found 7 global variables, but some of them are false positives as a result of tidyerse, because tidyverse takes non-standard expression for R. The true positive here is “effort”. Duncan recommands people using the codetools::findGlobals() function everytime they write a function.</p>
+<ul>
+<li>The key trick here is rep(vectorA, vectorB), where vectors A and B have the same length. say A = c(“A”,“B”,“C”,“D”) and B = c(2,5,3,6), rep() will repeat A twice, B five times and so on.</li>
+</ul>
+<p><em>VECTORIZATION</em> is key to speed things up. You can speed things up by the thousands.</p>
 
 
 

@@ -1,0 +1,9 @@
+Package: r.package
+Title: Example code and data from RBeyondBasics workshop
+Description: Sample code with a loop to make faster.
+Version: 0.1-0
+License: BSD
+Maintainer: Duncan Temple Lang <duncan@r-project.org>
+Author: Duncan Temple Lang <duncan@r-project.org>
+Depends: dplyr
+Built: R 3.4.1; ; 2018-09-10 22:33:07 UTC; unix
